@@ -8,6 +8,8 @@ type TaskResult = any;
 interface Task {
   taskId: number;
   payload: TaskPayload;
+  width?: number;
+  height?: number;
 }
 
 interface Callback {
@@ -29,17 +31,23 @@ export default class WorkerPool {
     this.workerUrl = workerUrl;
 
     for (let i = 0; i < maxWorkers; i++) {
-      const worker = new Worker(workerUrl);
+      const worker = new Worker(new URL(workerUrl, import.meta.url), {
+        type: "module",
+      });
       worker.onmessage = (e: MessageEvent) => this.handleWorkerMsg(worker, e);
       this.pool.push(worker);
       this.idle.push(worker);
     }
   }
 
-  runTask(payload: TaskPayload): Promise<TaskResult> {
+  runTask(
+    payload: TaskPayload,
+    width: number,
+    height: number
+  ): Promise<TaskResult> {
     const taskId = this.taskIdCounter++;
 
-    const task: Task = { taskId, payload };
+    const task: Task = { taskId, payload, width, height };
 
     return new Promise((resolve, reject) => {
       this.callbacks.set(taskId, { resolve, reject });
